@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+html,
+body {
+  background-color: #0b0f17;
+  color: #e5e7eb;
+}
+
+/* Thin neon scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f17;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.45);
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-neon-cyan/20 bg-panel/70 backdrop-blur
+      shadow-[0_0_0_1px_rgba(34,211,238,0.04)] transition-colors;
+  }
+  .card:hover {
+    @apply border-neon-cyan/40;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2
+      text-sm font-medium transition-all disabled:opacity-40
+      disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40
+      hover:bg-neon-cyan/25 hover:shadow-glow;
+  }
+  .btn-ghost {
+    @apply btn border border-white/10 text-gray-300 hover:border-white/25
+      hover:text-white;
+  }
+  .btn-danger {
+    @apply btn bg-neon-red/10 text-neon-red border border-neon-red/40
+      hover:bg-neon-red/20;
+  }
+  .btn-approve {
+    @apply btn bg-neon-green/10 text-neon-green border border-neon-green/40
+      hover:bg-neon-green/20;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-panel2 px-3 py-2 text-sm
+      text-gray-100 placeholder:text-gray-500 outline-none
+      focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/30;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5
+      text-[11px] font-medium;
+  }
+}
