@@ -12,8 +12,32 @@ Built from the Open Agent Hackathon 2026 blueprint. Integrates:
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+cp .env.example .env.local   # fill in Zetaris + Meterless values
+npm run dev                  # http://localhost:3001
 ```
+
+> The app runs on **port 3001** so it coexists with the Zetaris web UI on 3000.
+
+## Connecting real Zetaris (Data layer)
+
+The Opportunity Radar federates three tables — `universities`, `scholarships`,
+`jobs` — through your local Zetaris instance in a single UNION ALL query. To
+wire it up:
+
+1. Start Zetaris locally (see the Participant Setup Guide), then register the
+   opportunity data: follow `zetaris/SETUP.md` (copy the CSVs into the driver
+   container and run `zetaris/zetaris-setup.sql` in the SQL Workspace).
+2. Create an API key in the Zetaris UI and put your connection details in
+   `.env.local` (`ZETARIS_REST_URL`, `ZETARIS_ORG_ID`, `ZETARIS_API_KEY`,
+   `ZETARIS_CATALOG`).
+3. Verify the live connection:
+   ```bash
+   npm run zetaris:ping
+   ```
+
+When Zetaris is reachable the Radar shows a green **"Live Zetaris federation"**
+badge; if the key is missing or a query fails, it shows an amber **"Mock
+fallback"** badge and serves the bundled dataset so the demo never breaks.
 
 Then walk the 6-phase loop:
 

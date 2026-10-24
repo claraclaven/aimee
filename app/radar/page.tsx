@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Radar, RefreshCw, Filter } from "lucide-react";
+import { Radar, RefreshCw, Filter, Database, AlertTriangle } from "lucide-react";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { clientStore } from "@/lib/client-store";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,16 @@ export default function RadarPage() {
     targetRole: string;
     rejectedStacks: string[];
   } | null>(null);
+  const [dataSource, setDataSource] = useState<{
+    source: "zetaris-rest" | "mock-fallback";
+    note: string;
+  } | null>(null);
+  const [insights, setInsights] = useState<{
+    live: boolean;
+    source: string;
+    note: string;
+    insights: { label: string; value: string; sql: string }[];
+  } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const discover = useCallback(async () => {
@@ -40,12 +50,20 @@ export default function RadarPage() {
     const data = await res.json();
     setOpps(data.opportunities ?? []);
     setCtx(data.context ?? null);
+    setDataSource(data.dataSource ?? null);
     setLoading(false);
   }, [filter]);
 
   useEffect(() => {
     discover();
   }, [discover]);
+
+  useEffect(() => {
+    fetch("/api/insights")
+      .then((r) => r.json())
+      .then(setInsights)
+      .catch(() => setInsights(null));
+  }, []);
 
   async function prepare(opp: ScoredOpportunity) {
     setBusyId(opp.id);
@@ -88,6 +106,75 @@ export default function RadarPage() {
           Match &amp; Rank
         </button>
       </header>
+
+      {dataSource && (
+        <div
+          className={cn(
+            "card flex items-center gap-2 p-3 text-xs",
+            dataSource.source === "zetaris-rest"
+              ? "text-neon-green"
+              : "text-neon-amber",
+          )}
+        >
+          {dataSource.source === "zetaris-rest" ? (
+            <Database size={14} />
+          ) : (
+            <AlertTriangle size={14} />
+          )}
+          <span className="font-medium">
+            {dataSource.source === "zetaris-rest"
+              ? "Live Zetaris federation"
+              : "Mock fallback"}
+          </span>
+          <span className="text-gray-500">— {dataSource.note}</span>
+        </div>
+      )}
+
+      {insights && (
+        <div className="card p-4">
+          {insights.live && insights.insights.length > 0 ? (
+            <>
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neon-green">
+                <Database size={14} /> Live Zetaris federation
+                <span className="font-normal normal-case text-gray-500">
+                  — grounded in {insights.source}
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {insights.insights.map((m) => (
+                  <div
+                    key={m.label}
+                    className="rounded-xl border border-neon-green/20 bg-panel2 p-3"
+                    title={m.sql}
+                  >
+                    <p className="text-2xl font-bold text-white">{m.value}</p>
+                    <p className="mt-1 text-xs text-gray-400">{m.label}</p>
+                    <p className="mt-1 truncate font-mono text-[10px] text-gray-600">
+                      {m.sql}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-start gap-2 text-xs text-neon-amber">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold uppercase tracking-wide">
+                  Zetaris live query — mock fallback
+                </p>
+                <p className="mt-1 font-normal normal-case text-gray-500">
+                  Zetaris is running and queryable in its own workbench, but the
+                  REST API isn&apos;t reachable from this app process (the
+                  hackathon image fronts it with a TLS overlay bound to the
+                  container network). Opportunities below are served from the
+                  bundled dataset. {insights.note}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {ctx && (
         <div className="card flex flex-wrap items-center gap-2 p-3 text-xs text-gray-400">

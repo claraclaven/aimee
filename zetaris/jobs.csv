@@ -1,0 +1,8 @@
+id,title,organization,location,field,requirements,rating,financial_value,deadline
+job-stripe-swe,"Software Engineer, Payments Infrastructure",Stripe,Remote / Dublin,Backend Engineering,"typescript;distributed systems;postgresql;grpc",4.6,"$135,000/yr",2026-11-30
+job-vercel-fullstack,Full-Stack Engineer,Vercel,Remote,Full-Stack Engineering,"typescript;react;next.js;node.js",4.7,"$120,000/yr",2026-12-10
+job-openai-ai,"AI Engineer, Applied Research",OpenAI,San Francisco,AI Engineering,"python;pytorch;machine learning;llm",4.8,"$190,000/yr",2026-12-20
+job-shopify-backend,Senior Backend Developer,Shopify,Remote / Canada,Backend Engineering,"ruby;rails;graphql;mysql",4.5,"$140,000/yr",2027-01-05
+job-legacy-php,PHP Web Developer,LegacyWorks Agency,On-site / London,Web Development,"php;mysql;jquery;wordpress",3.6,"£42,000/yr",2026-11-25
+job-datadog-platform,Platform Engineer,Datadog,Remote / New York,Platform Engineering,"go;kubernetes;distributed systems;aws",4.6,"$150,000/yr",2027-01-12
+job-rustcorp-systems,Systems Engineer (Rust),Fermyon,Remote,Systems Engineering,"rust;distributed systems;webassembly;docker",4.7,"$160,000/yr",2026-12-18

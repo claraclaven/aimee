@@ -38,16 +38,17 @@ export async function POST(req: NextRequest) {
     ],
   };
 
-  const opportunities = await zetaris.query(query);
+  const { opportunities, source, note } = await zetaris.queryWithSource(query);
 
   if (body.rank === false) {
-    return NextResponse.json({ opportunities });
+    return NextResponse.json({ opportunities, dataSource: { source, note } });
   }
 
   const ctx = contextFromMemory(memories);
   const ranked = rankOpportunities(opportunities, ctx);
   return NextResponse.json({
     opportunities: ranked,
+    dataSource: { source, note },
     context: { skills: ctx.skills, targetRole: ctx.targetRole, rejectedStacks },
   });
 }

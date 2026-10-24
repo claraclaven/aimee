@@ -5,6 +5,9 @@
 // ---------------------------------------------------------------------------
 
 import { ALL_OPPORTUNITIES } from "@/data/mock-zetaris-data";
+import { zetarisConfig, zetarisConfigured } from "./config";
+import { buildOpportunitySql, rowsToOpportunities } from "./zetaris-sql";
+import { runSql } from "./zetaris-rest";
 import type {
   FederatedOpportunity,
   MemoryRecord,
@@ -17,9 +20,74 @@ function norm(s: string): string {
   return s.toLowerCase().trim();
 }
 
+export interface ZetarisQueryResult {
+  opportunities: FederatedOpportunity[];
+  source: "zetaris-rest" | "mock-fallback";
+  note: string;
+}
+
 export class ZetarisClient {
-  /** Single federated query across all three buckets. */
+  /**
+   * Single federated query across all three buckets.
+   * Tries the real Zetaris REST API first (when configured); on any failure,
+   * falls back to the in-memory mock so the demo stays resilient.
+   */
   async query(q: ZetarisQuery = {}): Promise<FederatedOpportunity[]> {
+    return (await this.queryWithSource(q)).opportunities;
+  }
+
+  /** Like query(), but also reports whether real Zetaris or the mock was used. */
+  async queryWithSource(q: ZetarisQuery = {}): Promise<ZetarisQueryResult> {
+    if (zetarisConfigured()) {
+      try {
+        const sql = buildOpportunitySql(q, zetarisConfig.catalog);
+        const result = await runSql(sql);
+        const opportunities = rowsToOpportunities(result.rows);
+        // Apply exclusion/rejected-stack filters client-side (post-SQL) so the
+        // behavior is identical regardless of data source.
+        return {
+          opportunities: this.applyMemoryFilters(opportunities, q),
+          source: "zetaris-rest",
+          note: `Federated ${opportunities.length} rows via Zetaris REST (${zetarisConfig.restUrl}).`,
+        };
+      } catch (err) {
+        return {
+          opportunities: this.filterMock(q),
+          source: "mock-fallback",
+          note: `Zetaris REST failed (${String(err)}); using mock data.`,
+        };
+      }
+    }
+    return {
+      opportunities: this.filterMock(q),
+      source: "mock-fallback",
+      note: "Zetaris API key not configured; using mock data.",
+    };
+  }
+
+  /** Apply H-MEM-derived exclusion and rejected-stack filters. */
+  private applyMemoryFilters(
+    opps: FederatedOpportunity[],
+    q: ZetarisQuery,
+  ): FederatedOpportunity[] {
+    let results = opps;
+    if (q.excludeIds?.length) {
+      const ex = new Set(q.excludeIds);
+      results = results.filter((o) => !ex.has(o.id));
+    }
+    if (q.rejectedStacks?.length) {
+      const rejected = q.rejectedStacks.map(norm);
+      results = results.filter(
+        (o) =>
+          !o.requirements.some((r) => rejected.includes(norm(r))) &&
+          !rejected.some((rs) => norm(o.title).includes(rs)),
+      );
+    }
+    return results;
+  }
+
+  /** Full in-memory filtering against the mock dataset (offline fallback). */
+  private filterMock(q: ZetarisQuery = {}): FederatedOpportunity[] {
     let results = [...ALL_OPPORTUNITIES];
 
     if (q.types?.length) {
@@ -44,22 +112,7 @@ export class ZetarisClient {
         return kws.some((k) => hay.includes(k));
       });
     }
-    // Filter out already-applied / previously-rejected IDs (from H-MEM).
-    if (q.excludeIds?.length) {
-      const ex = new Set(q.excludeIds);
-      results = results.filter((o) => !ex.has(o.id));
-    }
-    // Filter out listings referencing rejected stacks (preference supersession).
-    if (q.rejectedStacks?.length) {
-      const rejected = q.rejectedStacks.map(norm);
-      results = results.filter(
-        (o) =>
-          !o.requirements.some((r) => rejected.includes(norm(r))) &&
-          !rejected.some((rs) => norm(o.title).includes(rs)),
-      );
-    }
-
-    return results;
+    return this.applyMemoryFilters(results, q);
   }
 }
 

@@ -4,13 +4,15 @@
   "private": true,
   "description": "Tertiary Education & Career Planner — autonomous local-first agent with Meterless H-MEM memory and Zetaris federated data.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "next lint",
-    "conformance": "tsx scripts/conformance.ts"
+    "conformance": "tsx scripts/conformance.ts",
+    "zetaris:ping": "tsx scripts/zetaris-ping.ts"
   },
   "dependencies": {
+    "dotenv": "16.4.5",
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
