@@ -159,19 +159,32 @@ export class MeterlessProvider {
   /**
    * Contract rule: Auto-detect across ports 8088, 8090, 8787, 11434 on
    * 127.0.0.1, localhost, and [::1]. Return first online/unauthorized endpoint.
+   *
+   * Probes run in PARALLEL with a short timeout so that when no runtime is
+   * present the whole check resolves in well under a second (instead of
+   * serially timing out across 12 endpoints).
    */
   public async autoDetect(): Promise<ProviderState> {
     const ports = [8088, 8090, 8787, 11434];
     const hosts = ["127.0.0.1", "localhost", "[::1]"];
-    for (const host of hosts) {
-      for (const port of ports) {
-        const testUrl = `http://${host}:${port}/v1`;
-        const state = await this.probe(testUrl, 1500);
-        if (state.status === "online" || state.status === "unauthorized") {
-          this.baseUrl = testUrl;
-          return state;
-        }
-      }
+
+    // Try the explicitly configured base URL first (fast path when set).
+    const candidates = [
+      this.baseUrl,
+      ...hosts.flatMap((h) => ports.map((p) => `http://${h}:${p}/v1`)),
+    ];
+    // De-duplicate while preserving order.
+    const unique = [...new Set(candidates)];
+
+    const results = await Promise.all(
+      unique.map((url) => this.probe(url, 600)),
+    );
+    const hit = results.find(
+      (s) => s.status === "online" || s.status === "unauthorized",
+    );
+    if (hit) {
+      this.baseUrl = hit.url;
+      return hit;
     }
     return {
       url: this.baseUrl,

@@ -23,7 +23,7 @@ export interface ZetarisRunResult {
   raw: unknown;
 }
 
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 120_000;
 
 /**
  * Execute a single SQL statement against Zetaris over REST.
@@ -64,10 +64,25 @@ export async function runSql(
  * Normalize to { columns, rows } where each row is a column->value object.
  */
 function normalizeResult(data: unknown): ZetarisRunResult {
-  const d = data as Record<string, unknown>;
-  const payload = (d?.data ?? d?.result ?? d) as Record<string, unknown>;
+  const d = (data ?? {}) as Record<string, unknown>;
 
-  // Shape A: { columns: [...], rows: [[...], [...]] }
+  // Zetaris Lightning shape: { headers: ["n"], data: [["1"]], total, timeUsed }
+  if (Array.isArray(d.headers) && Array.isArray(d.data)) {
+    const columnNames = (d.headers as unknown[]).map((h) => String(h));
+    const rows: ZetarisRow[] = (d.data as unknown[]).map((r) => {
+      const obj: ZetarisRow = {};
+      if (Array.isArray(r)) {
+        r.forEach((v, i) => {
+          obj[columnNames[i] ?? `col${i}`] = v;
+        });
+      }
+      return obj;
+    });
+    return { columns: columnNames, rows, raw: data };
+  }
+
+  // Fallback: other possible shapes { columns:[...], rows:[[...]] }.
+  const payload = (d?.data ?? d?.result ?? d) as Record<string, unknown>;
   const cols = (payload?.columns ?? payload?.schema ?? []) as unknown[];
   const columnNames = cols
     .map((c) =>

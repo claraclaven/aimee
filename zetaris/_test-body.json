@@ -1,0 +1,1 @@
+{"queryId":"20000002-0000-0000-0000-000000000002","sql":"SELECT id, title FROM (VALUES ('u1','MIT'),('u2','Stanford')) AS t(id, title) WHERE LOWER(title) LIKE '%stan%'","source":"SqlEditor","limit":10}

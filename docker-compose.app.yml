@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Runs the Tertiary Planner app as a container ON the Zetaris Docker network,
+# so it can reach the Zetaris REST API as http://api:8888 (the address the
+# container network trusts — bypasses the TLS overlay that blocks host access).
+#
+# USAGE (from the project root, in WSL where Docker runs):
+#   1. Find the Zetaris network name:
+#        docker network ls | grep zetaris
+#      It is usually "zetaris_default". If different, set ZETARIS_NETWORK below.
+#   2. Build + start:
+#        docker compose -f docker-compose.app.yml up --build
+#   3. Open http://localhost:3001
+#
+# Env notes:
+#   - ZETARIS_REST_URL uses the service name "api" on the shared network.
+#   - Meterless Nightshift runs on the Windows host, reached via
+#     host.docker.internal from inside the container.
+# ---------------------------------------------------------------------------
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tertiary-planner-app
+    ports:
+      - "3001:3001"
+    environment:
+      # Zetaris REST — service name on the shared Docker network.
+      ZETARIS_REST_URL: http://api:8888/api/v1.0
+      ZETARIS_ORG_ID: "1"
+      ZETARIS_API_KEY: ${ZETARIS_API_KEY}
+      ZETARIS_CATALOG: TPCDS_DB
+      # Meterless Nightshift on the Windows host.
+      METERLESS_BASE_URL: http://host.docker.internal:8088/v1
+      METERLESS_RUNTIME_TOKEN: ${METERLESS_RUNTIME_TOKEN:-}
+      METERLESS_MODEL: ${METERLESS_MODEL:-meterless/auto}
+    extra_hosts:
+      # Lets the container reach Windows-host services (Nightshift).
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Live-mount source for hot reload; keep container's own node_modules.
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - zetaris
+
+networks:
+  zetaris:
+    external: true
+    # The Zetaris stack's network. Confirm with: docker network ls | grep zetaris
+    name: ${ZETARIS_NETWORK:-zetaris_default}
