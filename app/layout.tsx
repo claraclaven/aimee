@@ -3,9 +3,9 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Tertiary Education & Career Planner",
+  title: "Compass — Education & Career Planner",
   description:
-    "Autonomous local-first agent with Meterless H-MEM memory and Zetaris federated data.",
+    "Compass: an autonomous local-first agent with Meterless H-MEM memory and Zetaris federated data.",
 };
 
 export default function RootLayout({

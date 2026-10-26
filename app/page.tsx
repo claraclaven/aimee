@@ -81,7 +81,7 @@ export default function Dashboard() {
           Local-first · Autonomous · Human-in-the-loop
         </p>
         <h1 className="max-w-3xl text-3xl font-bold leading-tight text-white sm:text-4xl">
-          Your autonomous Tertiary Education & Career Planner
+          Compass — your autonomous education & career planner
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-400">
           Learns and remembers you with Meterless H-MEM, federates universities,

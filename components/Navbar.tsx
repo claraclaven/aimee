@@ -31,7 +31,7 @@ export function Navbar() {
             <GraduationCap size={18} />
           </span>
           <span className="hidden text-sm font-semibold text-white sm:block">
-            Tertiary Planner
+            Compass
           </span>
         </Link>
 
