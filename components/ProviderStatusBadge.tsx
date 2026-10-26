@@ -17,9 +17,10 @@ export function ProviderStatusBadge() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    async function probe() {
       try {
-        const res = await fetch("/api/provider");
+        const res = await fetch("/api/provider", { cache: "no-store" });
         const data = await res.json();
         if (!cancelled) setState(data.state);
       } catch {
@@ -33,9 +34,14 @@ export function ProviderStatusBadge() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    }
+
+    probe();
+    // Re-check periodically so a transient startup "offline" self-corrects.
+    const id = setInterval(probe, 15_000);
     return () => {
       cancelled = true;
+      clearInterval(id);
     };
   }, []);
 

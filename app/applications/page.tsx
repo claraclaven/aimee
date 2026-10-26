@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  CheckCircle2,
-  XCircle,
-  Mail,
-  Cpu,
-  AlertTriangle,
-  Send,
-} from "lucide-react";
+import { CheckCircle2, XCircle, Mail, Cpu, Send } from "lucide-react";
 import { CvDiffViewer } from "@/components/CvDiffViewer";
 import { clientStore } from "@/lib/client-store";
 import { cn, formatTime } from "@/lib/utils";
@@ -109,19 +102,22 @@ export default function ApplicationsPage() {
         </div>
       </header>
 
-      {/* Provider provenance */}
-      <div
-        className={cn(
-          "card flex items-center gap-2 p-3 text-xs",
-          tailor.provider.online ? "text-neon-green" : "text-neon-amber",
-        )}
-      >
-        {tailor.provider.online ? (
-          <Cpu size={14} />
-        ) : (
-          <AlertTriangle size={14} />
-        )}
-        <span>{tailor.provider.note}</span>
+      {/* Provider provenance — calm, honest status chip */}
+      <div className="flex items-center gap-2 text-xs">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
+            tailor.provider.online
+              ? "border-neon-green/40 text-neon-green bg-neon-green/10"
+              : "border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5",
+          )}
+          title={tailor.provider.note}
+        >
+          <Cpu size={12} />
+          {tailor.provider.online
+            ? `Generated via Meterless Runtime · NVIDIA Nemotron (${tailor.provider.mode})`
+            : "Draft generated locally"}
+        </span>
       </div>
 
       {decision && (

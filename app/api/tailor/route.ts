@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tailorApplication } from "@/lib/tailor";
 import { zetaris } from "@/lib/zetaris-client";
+import { meterlessConfig } from "@/lib/config";
 import type { FederatedOpportunity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   const result = await tailorApplication(
     body.baseCv,
     opp,
-    body.mode ?? "meterless/auto",
+    body.mode ?? meterlessConfig.model,
   );
   return NextResponse.json({ result });
 }

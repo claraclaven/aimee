@@ -10,12 +10,28 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// Cache the probe result so every page load doesn't re-probe the network.
+let cachedState: Awaited<ReturnType<MeterlessProvider["autoDetect"]>> | null =
+  null;
+let cachedAt = 0;
+const PROBE_CACHE_MS = 30_000;
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url") ?? undefined;
   const token = req.nextUrl.searchParams.get("token") ?? undefined;
   const provider = new MeterlessProvider({ baseUrl: url, token });
 
-  const state = url ? await provider.probe() : await provider.autoDetect();
+  let state: Awaited<ReturnType<MeterlessProvider["autoDetect"]>>;
+  if (!url && cachedState && Date.now() - cachedAt < PROBE_CACHE_MS) {
+    state = cachedState;
+  } else {
+    state = url ? await provider.probe() : await provider.autoDetect();
+    // Only cache a GOOD result, so a transient startup "offline" doesn't stick.
+    if (!url && (state.status === "online" || state.status === "unauthorized")) {
+      cachedState = state;
+      cachedAt = Date.now();
+    }
+  }
 
   return NextResponse.json({
     provider: {

@@ -1,7 +1,11 @@
 # ---------------------------------------------------------------------------
-# Containerize the app so it can join the Zetaris Docker network and reach the
-# REST API as http://api:8888 (inside the network the TLS overlay trusts).
-# Meterless Nightshift (a Windows host app) is reached via host.docker.internal.
+# Production image: builds the app once (fast optimized output), then serves
+# it. Far faster than `next dev` for the demo — pages are precompiled, not
+# recompiled per request.
+#
+# Networking: joins the Zetaris Docker network (reach the REST API as
+# http://api:8888) and reaches Meterless Nightshift on the Windows host via
+# host.docker.internal.
 # ---------------------------------------------------------------------------
 FROM node:20-alpine
 
@@ -11,11 +15,11 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund
 
-# Copy the rest of the source.
+# Copy source and build the optimized production bundle.
 COPY . .
+RUN npm run build
 
-# Next.js dev server port.
 EXPOSE 3001
 
-# Dev mode keeps the demo simple (hot reload, no build step needed).
-CMD ["npm", "run", "dev"]
+# Serve the precompiled production build (fast).
+CMD ["npm", "run", "start"]

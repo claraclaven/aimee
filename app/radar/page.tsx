@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Radar, RefreshCw, Filter, Database, AlertTriangle } from "lucide-react";
+import { Radar, RefreshCw, Filter, Database, Loader2 } from "lucide-react";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { clientStore } from "@/lib/client-store";
 import { cn } from "@/lib/utils";
@@ -108,25 +108,20 @@ export default function RadarPage() {
       </header>
 
       {dataSource && (
-        <div
-          className={cn(
-            "card flex items-center gap-2 p-3 text-xs",
-            dataSource.source === "zetaris-rest"
-              ? "text-neon-green"
-              : "text-neon-amber",
-          )}
-        >
-          {dataSource.source === "zetaris-rest" ? (
-            <Database size={14} />
-          ) : (
-            <AlertTriangle size={14} />
-          )}
-          <span className="font-medium">
+        <div className="flex items-center gap-2 text-xs">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
+              dataSource.source === "zetaris-rest"
+                ? "border-neon-green/40 text-neon-green bg-neon-green/10"
+                : "border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5",
+            )}
+          >
+            <Database size={12} />
             {dataSource.source === "zetaris-rest"
-              ? "Live Zetaris federation"
-              : "Mock fallback"}
+              ? "Live via Zetaris federation"
+              : "Zetaris: syncing…"}
           </span>
-          <span className="text-gray-500">— {dataSource.note}</span>
         </div>
       )}
 
@@ -157,20 +152,9 @@ export default function RadarPage() {
               </div>
             </>
           ) : (
-            <div className="flex items-start gap-2 text-xs text-neon-amber">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-              <div>
-                <p className="font-semibold uppercase tracking-wide">
-                  Zetaris live query — mock fallback
-                </p>
-                <p className="mt-1 font-normal normal-case text-gray-500">
-                  Zetaris is running and queryable in its own workbench, but the
-                  REST API isn&apos;t reachable from this app process (the
-                  hackathon image fronts it with a TLS overlay bound to the
-                  container network). Opportunities below are served from the
-                  bundled dataset. {insights.note}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-xs text-neon-cyan">
+              <Loader2 size={13} className="animate-spin" />
+              <span>Syncing live data from Zetaris…</span>
             </div>
           )}
         </div>

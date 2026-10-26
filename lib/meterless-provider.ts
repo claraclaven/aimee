@@ -46,7 +46,11 @@ export class MeterlessProvider {
   private appId: string;
 
   constructor(config?: Partial<MeterlessConfig>) {
-    this.baseUrl = this.normalizeUrl(config?.baseUrl || METERLESS_DEFAULT_URL);
+    this.baseUrl = this.normalizeUrl(
+      config?.baseUrl ||
+        process.env.METERLESS_BASE_URL ||
+        METERLESS_DEFAULT_URL,
+    );
     this.token = config?.token || process.env.METERLESS_RUNTIME_TOKEN || "";
     this.appId = config?.appId || METERLESS_APP_ID;
   }
@@ -166,7 +170,9 @@ export class MeterlessProvider {
    */
   public async autoDetect(): Promise<ProviderState> {
     const ports = [8088, 8090, 8787, 11434];
-    const hosts = ["127.0.0.1", "localhost", "[::1]"];
+    // Include host.docker.internal so a containerized app can reach a
+    // Nightshift runtime on the Windows/macOS host.
+    const hosts = ["127.0.0.1", "localhost", "[::1]", "host.docker.internal"];
 
     // Try the explicitly configured base URL first (fast path when set).
     const candidates = [
@@ -201,6 +207,7 @@ export class MeterlessProvider {
   public async complete(
     prompt: string,
     mode: string = "meterless/auto",
+    timeoutMs: number = METERLESS_TIMEOUT_MS,
   ): Promise<string> {
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
@@ -208,8 +215,12 @@ export class MeterlessProvider {
       body: JSON.stringify({
         model: mode,
         messages: [{ role: "user", content: prompt }],
+        // Keep responses tight: a CV + cover letter needs far fewer tokens than
+        // a long reasoning trace, and this bounds latency.
+        max_tokens: 1200,
+        temperature: 0.4,
       }),
-      signal: AbortSignal.timeout(METERLESS_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) {
       throw new Error(`Meterless error ${res.status}: ${await res.text()}`);

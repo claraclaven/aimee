@@ -26,6 +26,37 @@ export interface ZetarisQueryResult {
   note: string;
 }
 
+// Cached live rows from the last successful Zetaris round-trip. Served
+// instantly; refreshed in the background so the slow engine never blocks a
+// page load. Memory filters are still applied per-request.
+let liveCache: { rows: FederatedOpportunity[]; at: number } | null = null;
+const LIVE_CACHE_MS = 5 * 60_000; // keep live rows 5 min
+let refreshing = false; // guard against concurrent background refreshes
+let lastLiveSuccessAt = 0; // proof the Zetaris connection worked recently
+
+/** Kick off a background Zetaris fetch (fire-and-forget). Never throws. */
+function backgroundRefresh(): void {
+  if (refreshing || !zetarisConfigured()) return;
+  refreshing = true;
+  const sql = buildOpportunitySql({}, zetarisConfig.catalog);
+  // Generous timeout: this runs off the request path, so slowness is harmless.
+  runSql(sql, 500, 60_000)
+    .then((result) => {
+      liveCache = { rows: rowsToOpportunities(result.rows), at: Date.now() };
+      lastLiveSuccessAt = Date.now();
+    })
+    .catch(() => {
+      /* leave cache as-is; UI falls back to bundled data */
+    })
+    .finally(() => {
+      refreshing = false;
+    });
+}
+
+export function zetarisLastLiveSuccessAt(): number {
+  return lastLiveSuccessAt;
+}
+
 export class ZetarisClient {
   /**
    * Single federated query across all three buckets.
@@ -36,33 +67,62 @@ export class ZetarisClient {
     return (await this.queryWithSource(q)).opportunities;
   }
 
-  /** Like query(), but also reports whether real Zetaris or the mock was used. */
+  /**
+   * Never blocks on the slow engine:
+   *  - If we have recent live rows cached, serve them instantly.
+   *  - Otherwise serve bundled data instantly AND trigger a background refresh,
+   *    so the next load shows live data once Zetaris eventually responds.
+   */
   async queryWithSource(q: ZetarisQuery = {}): Promise<ZetarisQueryResult> {
-    if (zetarisConfigured()) {
-      try {
-        const sql = buildOpportunitySql(q, zetarisConfig.catalog);
-        const result = await runSql(sql);
-        const opportunities = rowsToOpportunities(result.rows);
-        // Apply exclusion/rejected-stack filters client-side (post-SQL) so the
-        // behavior is identical regardless of data source.
-        return {
-          opportunities: this.applyMemoryFilters(opportunities, q),
-          source: "zetaris-rest",
-          note: `Federated ${opportunities.length} rows via Zetaris REST (${zetarisConfig.restUrl}).`,
-        };
-      } catch (err) {
-        return {
-          opportunities: this.filterMock(q),
-          source: "mock-fallback",
-          note: `Zetaris REST failed (${String(err)}); using mock data.`,
-        };
-      }
+    if (liveCache && Date.now() - liveCache.at < LIVE_CACHE_MS) {
+      // Refresh in the background if the cache is getting old (>60s).
+      if (Date.now() - liveCache.at > 60_000) backgroundRefresh();
+      return {
+        opportunities: this.applyMemoryFilters(
+          this.filterCached(liveCache.rows, q),
+          q,
+        ),
+        source: "zetaris-rest",
+        note: `Federated ${liveCache.rows.length} rows via Zetaris REST (cached).`,
+      };
     }
+
+    // No fresh cache: serve bundled data NOW, warm the live cache in background.
+    backgroundRefresh();
     return {
       opportunities: this.filterMock(q),
       source: "mock-fallback",
-      note: "Zetaris API key not configured; using mock data.",
+      note: zetarisConfigured()
+        ? "Warming live Zetaris connection in the background; showing bundled data meanwhile."
+        : "Zetaris API key not configured; using bundled data.",
     };
+  }
+
+  /** Apply type/field/location/keyword filters to already-fetched rows. */
+  private filterCached(
+    rows: FederatedOpportunity[],
+    q: ZetarisQuery,
+  ): FederatedOpportunity[] {
+    let r = rows;
+    if (q.types?.length) r = r.filter((o) => q.types!.includes(o.type));
+    if (q.field) {
+      const f = norm(q.field);
+      r = r.filter((o) => norm(o.field).includes(f) || f.includes(norm(o.field)));
+    }
+    if (q.location) {
+      const loc = norm(q.location);
+      r = r.filter((o) => norm(o.location).includes(loc));
+    }
+    if (q.keywords?.length) {
+      const kws = q.keywords.map(norm);
+      r = r.filter((o) => {
+        const hay = norm(
+          `${o.title} ${o.field} ${o.requirements.join(" ")} ${o.organization}`,
+        );
+        return kws.some((k) => hay.includes(k));
+      });
+    }
+    return r;
   }
 
   /** Apply H-MEM-derived exclusion and rejected-stack filters. */

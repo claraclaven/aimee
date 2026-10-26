@@ -23,15 +23,18 @@ export interface ZetarisRunResult {
   raw: unknown;
 }
 
-const TIMEOUT_MS = 120_000;
+// Short default so a slow Zetaris engine never blocks the UI — callers fall
+// back to bundled data almost instantly. Override per-call when needed.
+const TIMEOUT_MS = Number(process.env.ZETARIS_TIMEOUT_MS ?? 5000);
 
 /**
  * Execute a single SQL statement against Zetaris over REST.
- * Throws on non-OK responses so callers can decide on fallback behavior.
+ * Throws on non-OK responses (or timeout) so callers can fall back fast.
  */
 export async function runSql(
   sql: string,
   limit = 500,
+  timeoutMs = TIMEOUT_MS,
 ): Promise<ZetarisRunResult> {
   const url = `${zetarisConfig.restUrl}/sql-editor/sqls/run`;
   const res = await fetch(url, {
@@ -48,7 +51,7 @@ export async function runSql(
       source: "SqlEditor",
       limit,
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {

@@ -30,20 +30,25 @@ services:
       ZETARIS_ORG_ID: "1"
       ZETARIS_API_KEY: ${ZETARIS_API_KEY}
       ZETARIS_CATALOG: TPCDS_DB
-      # Meterless Nightshift on the Windows host.
-      METERLESS_BASE_URL: http://host.docker.internal:8088/v1
+      # Meterless Nightshift on the Windows host, reached from inside the
+      # container via Docker's host gateway alias. Confirmed reachable (returns
+      # HTTP 401 without a token, i.e. the connection works).
+      METERLESS_BASE_URL: ${METERLESS_BASE_URL:-http://host.docker.internal:8088/v1}
       METERLESS_RUNTIME_TOKEN: ${METERLESS_RUNTIME_TOKEN:-}
       METERLESS_MODEL: ${METERLESS_MODEL:-meterless/auto}
     extra_hosts:
       # Lets the container reach Windows-host services (Nightshift).
       - "host.docker.internal:host-gateway"
+    # No source live-mount: the image is a precompiled production build, which
+    # is dramatically faster than dev mode. Rebuild the image to pick up code
+    # changes (docker compose ... up --build). Only the H-MEM data dir persists.
     volumes:
-      # Live-mount source for hot reload; keep container's own node_modules.
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+      - hmem-data:/app/.data
     networks:
       - zetaris
+
+volumes:
+  hmem-data:
 
 networks:
   zetaris:
