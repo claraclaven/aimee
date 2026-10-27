@@ -44,6 +44,9 @@ services:
     # changes (docker compose ... up --build). Only the H-MEM data dir persists.
     volumes:
       - hmem-data:/app/.data
+      # Bind-mount the activity log to the host so the real JSONL trace lands in
+      # the project's ./logs folder (for submission evidence).
+      - ./logs:/app/logs
     networks:
       - zetaris
 

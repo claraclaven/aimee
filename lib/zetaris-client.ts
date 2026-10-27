@@ -39,8 +39,10 @@ function backgroundRefresh(): void {
   if (refreshing || !zetarisConfigured()) return;
   refreshing = true;
   const sql = buildOpportunitySql({}, zetarisConfig.catalog);
-  // Generous timeout: this runs off the request path, so slowness is harmless.
-  runSql(sql, 500, 60_000)
+  // Very generous timeout: the Zetaris Spark driver can take minutes on a cold
+  // start on constrained hardware. This runs off the request path, so a long
+  // wait is harmless — the UI keeps serving bundled data until it completes.
+  runSql(sql, 500, 240_000)
     .then((result) => {
       liveCache = { rows: rowsToOpportunities(result.rows), at: Date.now() };
       lastLiveSuccessAt = Date.now();

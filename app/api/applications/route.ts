@@ -4,6 +4,7 @@ import { allApplications, recordApplication } from "@/lib/applications";
 import { memoryStore } from "@/lib/hmem/store";
 import { memoryFeedback } from "@/lib/hmem/feedback";
 import { trustLedger } from "@/lib/hmem/ledger";
+import { logActivity, newRunId } from "@/lib/activity-log";
 import type { ApplicationRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,24 @@ export async function POST(req: NextRequest) {
     decision: "approve" | "reject";
     reason?: string;
     tailoredCvSnapshot?: string;
+    runId?: string;
   };
+
+  const runId = body.runId ?? newRunId();
+
+  // Log the human-in-the-loop decision (the approval gate).
+  await logActivity({
+    runId,
+    step: "human-approval",
+    agent: "human",
+    action: `student ${body.decision === "approve" ? "approved" : "rejected"} ${body.title}`,
+    status: "ok",
+    detail: {
+      opportunityId: body.opportunityId,
+      decision: body.decision,
+      reason: body.reason,
+    },
+  });
 
   if (body.decision === "approve") {
     const rec: ApplicationRecord = {
@@ -41,12 +59,24 @@ export async function POST(req: NextRequest) {
       trust: 1,
       meta: { opportunityId: body.opportunityId, applied_status: true },
     });
-    await trustLedger.append(
+    const ledgerEntry = await trustLedger.append(
       "apply",
       { id: body.opportunityId },
       `Approved & submitted application: ${body.title} @ ${body.organization}`,
     );
-    return NextResponse.json({ ok: true, status: "applied" });
+    await logActivity({
+      runId,
+      step: "memory-write",
+      agent: "hmem",
+      action: "recorded application to append-only trust ledger",
+      status: "ok",
+      detail: {
+        ledgerAction: "apply",
+        hash: ledgerEntry.hash,
+        prevHash: ledgerEntry.prevHash,
+      },
+    });
+    return NextResponse.json({ ok: true, status: "applied", runId });
   }
 
   // Reject: record + feed rejection reason into H-MEM (preference supersession).
@@ -62,5 +92,17 @@ export async function POST(req: NextRequest) {
   const feedback = await memoryFeedback.feedback("rejected", {
     reason: body.reason ?? "Rejected without a stated reason.",
   });
-  return NextResponse.json({ ok: true, status: "rejected", feedback });
+  await logActivity({
+    runId,
+    step: "memory-write",
+    agent: "hmem",
+    action: "mined rejection into memory; superseded clashing preferences",
+    status: "ok",
+    detail: {
+      reason: body.reason,
+      adjustedMemories: feedback.adjusted,
+      rejectionRecorded: Boolean(feedback.rejectionRecord),
+    },
+  });
+  return NextResponse.json({ ok: true, status: "rejected", feedback, runId });
 }
