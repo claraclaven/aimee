@@ -133,21 +133,19 @@ listing no longer appears. The agent's search got sharper without a restart.
 
 ## Limitations
 
-Honest about where this stands today and where we'd take it next.
+### Data is the real challenge, not the AI.
 
-1. **Data is the real challenge, not the AI.** We demoed with a curated set of
-   opportunities. Scaling to live, deduplicated, trustworthy feeds of jobs,
-   scholarships, and programs is the hard problem — and it's where we'd focus
-   next. Different application portals also have different structures and
-   requirements, so the agent needs to keep learning and reinforcing itself to
-   stay efficient across them.
+We demoed with a curated set of opportunities. Scaling to live, deduplicated,
+trustworthy feeds of jobs/scholarships/programs is the hard problem — and it's
+where we'd focus next.
 
-2. **Compounding memory needs real usage to prove itself.** The system gets
-   smarter as you give feedback. In a demo that's only a few interactions — the
-   genuine payoff shows over weeks of real use, which we haven't yet been able
-   to validate.
-
-3. **Output quality scales with model size.** Smaller models return empty or
-   thin results on complex tailoring; we need a large model (Nemotron Ultra
-   550B) for reliable quality. That's a real cost and hardware tradeoff for
-   anyone self-hosting.
+- **Different portal constraints.** Different application portals have different
+  structures and requirements, so the agent needs to keep learning and
+  reinforcing itself to obtain better efficiency.
+- **Compounding memory needs real usage to prove itself.** The system gets
+  smarter as you give feedback. In a demo that's a few interactions — the
+  genuine payoff only shows over weeks of real use, which we haven't been able
+  to validate yet.
+- **Output quality scales with model size.** Smaller models return empty or thin
+  results on complex tailoring; we need a large model (Nemotron Ultra 550B) for
+  reliable quality. That's a real cost/hardware tradeoff for anyone self-hosting.
