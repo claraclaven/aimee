@@ -454,13 +454,14 @@ export async function tailorApplication(
   // the real 180s-timeout call succeeds. If the real call fails, we fall back.
   if (provider.hasValidToken()) {
     try {
-      // 75s cap: a fast lane finishes well under this; if the model is slow we
-      // fall back to local tailoring rather than hanging the UI for minutes.
+      // 170s cap (under the route's 200s maxDuration): reasoning models need
+      // time to produce a full CV + cover letter after their internal trace.
+      // If the model is genuinely stuck we still fall back to local tailoring.
       const out = stripReasoning(
         await provider.complete(
           buildPrompt(baseCv, opp, memoryContext),
           mode,
-          75_000,
+          170_000,
         ),
       );
       const [cvPart, letterPart] = out.split("---COVER LETTER---");

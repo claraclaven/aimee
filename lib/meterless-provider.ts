@@ -215,9 +215,14 @@ export class MeterlessProvider {
       body: JSON.stringify({
         model: mode,
         messages: [{ role: "user", content: prompt }],
-        // Keep responses tight: a CV + cover letter needs far fewer tokens than
-        // a long reasoning trace, and this bounds latency.
-        max_tokens: 1200,
+        // Nemotron routing modes are reasoning models: they spend a large
+        // share of the output budget on an internal reasoning trace before
+        // emitting the final answer. A tight cap (e.g. 1200) gets fully
+        // consumed by reasoning on a long CV-tailoring prompt, so the model
+        // returns an empty response. 4000 gives enough headroom to reason AND
+        // produce the CV + cover letter, without inviting a runaway trace that
+        // blows past the request timeout.
+        max_tokens: 4000,
         temperature: 0.4,
       }),
       signal: AbortSignal.timeout(timeoutMs),
